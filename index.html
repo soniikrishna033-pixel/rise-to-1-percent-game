@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rise to the 1% - Investment Strategy Game</title>
+
+<style>
+
+:root{
+--primary-red:#ff0000;
+--dark-red:#8b0000;
+--black:#0a0a0a;
+--dark-gray:#1a1a1a;
+--text-white:#f0f0f0;
+--accent-gold:#ffd700;
+}
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;
+}
+
+body{
+background-color:var(--black);
+color:var(--text-white);
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+background-image:linear-gradient(135deg,#000000 0%,#1a0505 100%);
+}
+
+.container{
+width:100%;
+max-width:600px;
+padding:20px;
+}
+
+.card{
+background:var(--dark-gray);
+border:2px solid var(--primary-red);
+border-radius:15px;
+padding:25px;
+box-shadow:0 0 20px rgba(255,0,0,0.3);
+text-align:center;
+margin-bottom:20px;
+}
+
+h1{
+color:var(--primary-red);
+font-size:2.3rem;
+margin-bottom:10px;
+text-transform:uppercase;
+letter-spacing:2px;
+}
+
+h2{
+color:var(--accent-gold);
+margin-bottom:15px;
+}
+
+.btn{
+background:var(--primary-red);
+color:white;
+border:none;
+padding:15px;
+font-size:1rem;
+border-radius:8px;
+cursor:pointer;
+width:100%;
+margin:10px 0;
+font-weight:bold;
+}
+
+.btn:hover{
+transform:scale(1.03);
+box-shadow:0 0 10px red;
+}
+
+.btn-secondary{
+background:var(--dark-gray);
+border:1px solid var(--primary-red);
+}
+
+.mode-select{
+display:flex;
+gap:10px;
+margin-bottom:20px;
+}
+
+.mode-btn{
+flex:1;
+padding:10px;
+background:#222;
+border:1px solid #333;
+color:#888;
+cursor:pointer;
+border-radius:5px;
+}
+
+.mode-btn.active{
+background:var(--primary-red);
+color:white;
+}
+
+.timer-bar{
+width:100%;
+height:10px;
+background:#333;
+border-radius:5px;
+margin:15px 0;
+overflow:hidden;
+}
+
+.timer-fill{
+height:100%;
+background:var(--primary-red);
+width:100%;
+transition:width 1s linear;
+}
+
+.question-text{
+font-size:1.2rem;
+margin-bottom:20px;
+}
+
+.options-grid{
+display:grid;
+gap:10px;
+}
+
+.option-btn{
+background:#2a2a2a;
+border:1px solid #444;
+color:white;
+padding:15px;
+text-align:left;
+border-radius:8px;
+cursor:pointer;
+}
+
+.option-btn:hover{
+border-color:red;
+}
+
+.option-btn.correct{
+background:#006400 !important;
+}
+
+.option-btn.wrong{
+background:#8b0000 !important;
+}
+
+.hidden{
+display:none;
+}
+
+.score-display{
+font-size:3rem;
+color:var(--accent-gold);
+font-weight:bold;
+}
+
+.leaderboard-entry{
+display:flex;
+justify-content:space-between;
+padding:10px;
+border-bottom:1px solid #333;
+}
+
+.input-field{
+width:100%;
+padding:12px;
+margin:10px 0;
+background:#222;
+border:1px solid red;
+color:white;
+border-radius:5px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- START SCREEN -->
+<div id="start-screen" class="card">
+
+<h1>Rise to the 1%</h1>
+
+<p>Master Investment & Business Strategy</p>
+
+<input type="text" id="username" class="input-field" placeholder="Enter Your Name">
+
+<div class="mode-select">
+
+<button class="mode-btn active" onclick="setMode('quiz',this)">Knowledge Quiz</button>
+
+<button class="mode-btn" onclick="setMode('real',this)">Real Life Strategy</button>
+
+</div>
+
+<button class="btn" onclick="startGame()">Start Challenge</button>
+
+<button class="btn btn-secondary" onclick="showLeaderboard()">View Leaderboard</button>
+
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="card hidden">
+
+<div style="display:flex;justify-content:space-between">
+
+<span id="player-display"></span>
+
+<span id="score-display">Score:0</span>
+
+</div>
+
+<div class="timer-bar">
+
+<div id="timer-fill" class="timer-fill"></div>
+
+</div>
+
+<div style="text-align:right;font-size:.9rem">Time: <span id="time-left">30</span>s</div>
+
+<h2 id="question-category">Question</h2>
+
+<p id="question-text" class="question-text"></p>
+
+<div id="options-container" class="options-grid"></div>
+
+</div>
+
+<!-- RESULT -->
+<div id="result-screen" class="card hidden">
+
+<h1>Challenge Complete</h1>
+
+<p>Your Score</p>
+
+<div id="final-score" class="score-display">0</div>
+
+<button class="btn" onclick="restartGame()">Play Again</button>
+
+<button class="btn btn-secondary" onclick="showLeaderboard()">Leaderboard</button>
+
+</div>
+
+<!-- LEADERBOARD -->
+<div id="leaderboard-screen" class="card hidden">
+
+<h1>Top 1% Club</h1>
+
+<div id="leaderboard-list"></div>
+
+<button class="btn btn-secondary" onclick="goHome()">Back</button>
+
+</div>
+
+</div>
+
+<script>
+
+const TIME_LIMIT=30
+const TOTAL_QUESTIONS=20
+
+let currentMode="quiz"
+let score=0
+let currentQuestionIndex=0
+let timer
+let timeLeft=TIME_LIMIT
+let playerName=""
+let gameQuestions=[]
+
+const baseQuestions=[
+
+{type:"quiz",question:"What does FIRE stand for?",options:["Financial Independence Retire Early","Fast Income Real Estate","Future Investment Risk Equity","Fund Income Real Estate"],answer:0},
+
+{type:"quiz",question:"What is ROI?",options:["Return on Investment","Rate of Income","Risk of Investment","Return on Interest"],answer:0},
+
+{type:"quiz",question:"What is diversification?",options:["Spreading investments","One stock only","Avoid investing","Crypto only"],answer:0},
+
+{type:"quiz",question:"What is compound interest?",options:["Interest on principal only","Interest on principal + interest","Loan interest","Tax interest"],answer:1},
+
+{type:"quiz",question:"What is passive income?",options:["Investment income","Salary","Borrowed money","Loan"],answer:0},
+
+{type:"real",question:"You receive ₹1,00,000 bonus. Best move?",options:["Buy phone","Invest majority","Spend all","Ignore"],answer:1},
+
+{type:"real",question:"Friend promises guaranteed 50% return.",options:["Invest all","Invest little","Avoid scam","Take loan"],answer:2},
+
+{type:"real",question:"Before starting business?",options:["Quit job","Validate idea","Hire staff","Take loan"],answer:1},
+
+]
+
+function generateLargeQuestionBank(){
+
+let bank=[]
+
+for(let i=0;i<150;i++){
+
+baseQuestions.forEach(q=>{
+
+bank.push(JSON.parse(JSON.stringify(q)))
+
+})
+
+}
+
+return bank
+
+}
+
+const questionBank=generateLargeQuestionBank()
+
+function setMode(mode,btn){
+
+currentMode=mode
+
+document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"))
+
+btn.classList.add("active")
+
+}
+
+function startGame(){
+
+playerName=document.getElementById("username").value.trim()
+
+if(playerName===""){alert("Enter name");return}
+
+score=0
+currentQuestionIndex=0
+
+gameQuestions=questionBank.filter(q=>q.type===currentMode).sort(()=>Math.random()-0.5).slice(0,TOTAL_QUESTIONS)
+
+document.getElementById("start-screen").classList.add("hidden")
+document.getElementById("game-screen").classList.remove("hidden")
+
+document.getElementById("player-display").innerText="Player: "+playerName
+
+document.getElementById("score-display").innerText="Score:0"
+
+loadQuestion()
+
+}
+
+function loadQuestion(){
+
+clearInterval(timer)
+
+if(currentQuestionIndex>=TOTAL_QUESTIONS){
+
+endGame()
+return
+}
+
+let q=gameQuestions[currentQuestionIndex]
+
+document.getElementById("question-text").innerText=q.question
+
+let container=document.getElementById("options-container")
+
+container.innerHTML=""
+
+q.options.forEach((opt,i)=>{
+
+let btn=document.createElement("button")
+
+btn.className="option-btn"
+
+btn.innerText=opt
+
+btn.onclick=()=>selectAnswer(i)
+
+container.appendChild(btn)
+
+})
+
+startTimer()
+
+}
+
+function startTimer(){
+
+timeLeft=TIME_LIMIT
+
+document.getElementById("time-left").innerText=timeLeft
+
+document.getElementById("timer-fill").style.width="100%"
+
+timer=setInterval(()=>{
+
+timeLeft--
+
+document.getElementById("time-left").innerText=timeLeft
+
+document.getElementById("timer-fill").style.width=(timeLeft/TIME_LIMIT*100)+"%"
+
+if(timeLeft<=0){
+
+clearInterval(timer)
+
+currentQuestionIndex++
+
+loadQuestion()
+
+}
+
+},1000)
+
+}
+
+function selectAnswer(index){
+
+clearInterval(timer)
+
+let q=gameQuestions[currentQuestionIndex]
+
+let buttons=document.querySelectorAll(".option-btn")
+
+buttons.forEach((btn,i)=>{
+
+if(i===q.answer)btn.classList.add("correct")
+
+if(i===index && index!==q.answer)btn.classList.add("wrong")
+
+})
+
+if(index===q.answer){
+
+score+=10
+
+}
+
+document.getElementById("score-display").innerText="Score:"+score
+
+setTimeout(()=>{
+
+currentQuestionIndex++
+
+loadQuestion()
+
+},1000)
+
+}
+
+function endGame(){
+
+document.getElementById("game-screen").classList.add("hidden")
+document.getElementById("result-screen").classList.remove("hidden")
+
+document.getElementById("final-score").innerText=score
+
+saveScore()
+
+}
+
+function saveScore(){
+
+let leaderboard=JSON.parse(localStorage.getItem("riseLeaderboard")||"[]")
+
+leaderboard.push({name:playerName,score:score})
+
+leaderboard.sort((a,b)=>b.score-a.score)
+
+leaderboard=leaderboard.slice(0,20)
+
+localStorage.setItem("riseLeaderboard",JSON.stringify(leaderboard))
+
+}
+
+function showLeaderboard(){
+
+document.getElementById("start-screen").classList.add("hidden")
+document.getElementById("result-screen").classList.add("hidden")
+document.getElementById("leaderboard-screen").classList.remove("hidden")
+
+let leaderboard=JSON.parse(localStorage.getItem("riseLeaderboard")||"[]")
+
+let list=document.getElementById("leaderboard-list")
+
+list.innerHTML=""
+
+leaderboard.forEach((p,i)=>{
+
+let div=document.createElement("div")
+
+div.className="leaderboard-entry"
+
+div.innerHTML="<span>"+(i+1)+". "+p.name+"</span><span>"+p.score+"</span>"
+
+list.appendChild(div)
+
+})
+
+}
+
+function restartGame(){
+
+document.getElementById("result-screen").classList.add("hidden")
+document.getElementById("start-screen").classList.remove("hidden")
+
+}
+
+function goHome(){
+
+document.getElementById("leaderboard-screen").classList.add("hidden")
+document.getElementById("start-screen").classList.remove("hidden")
+
+}
+
+</script>
+
+</body>
+</html>
